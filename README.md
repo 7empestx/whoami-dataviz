@@ -1,3 +1,14 @@
+---
+title: whoami.dataviz
+emoji: 🧬
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: "5.20.1"
+app_file: app.py
+pinned: false
+---
+
 # whoami.dataviz
 
 > *"Give me a person's browsing history and I'll tell you who they are."* — Elliot Alderson
