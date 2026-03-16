@@ -1,6 +1,7 @@
 """Hugging Face Spaces app - serves the visualization."""
 import gradio as gr
 import json
+import re
 from pathlib import Path
 from pipeline.synthetic import generate_synthetic_data
 
@@ -12,13 +13,15 @@ data_json = json.dumps(data)
 css_content = Path("frontend/style.css").read_text()
 js_content = Path("frontend/app.js").read_text()
 
-# Filter out the API_URL line and loadData fetch from app.js
-js_lines = []
-for line in js_content.split('\n'):
-    if line.startswith('const API_URL'):
-        continue
-    js_lines.append(line)
-js_filtered = '\n'.join(js_lines)
+# Remove API_URL line
+js_content = re.sub(r"const API_URL = .*;\n", "", js_content)
+
+# Remove the original loadData function (async function loadData() { ... })
+js_content = re.sub(
+    r"async function loadData\(\) \{[\s\S]*?\n\}\n",
+    "",
+    js_content
+)
 
 # Inline everything for HF Spaces
 full_html = f"""
@@ -52,18 +55,33 @@ full_html = f"""
         <div id="tooltip"></div>
     </div>
     <script>
-        // Inline data - no fetch needed
-        const INLINE_DATA = {data_json};
+        console.log('Script starting...');
 
-        // Override loadData to use inline data
-        async function loadData() {{
-            data = INLINE_DATA;
-            updateStats();
-            updateLegend();
-            render();
+        // Inline data
+        const data = {data_json};
+        console.log('Data loaded:', data.repos.length, 'repos');
+
+        // Initialize immediately since data is inline
+        function init() {{
+            console.log('init() called');
+            try {{
+                updateStats();
+                console.log('updateStats done');
+                updateLegend();
+                console.log('updateLegend done');
+                render();
+                console.log('render done');
+            }} catch (e) {{
+                console.error('Error in init:', e);
+            }}
         }}
 
-        {js_filtered}
+        {js_content}
+
+        // Replace loadData call with init
+        console.log('Calling init...');
+        init();
+        console.log('Script complete');
     </script>
 </body>
 </html>
