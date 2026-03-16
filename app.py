@@ -1,93 +1,32 @@
-"""Hugging Face Spaces app - serves the visualization."""
-import gradio as gr
+"""FastAPI app for HF Spaces (Docker SDK)."""
 import json
-import re
 from pathlib import Path
-from pipeline.synthetic import generate_synthetic_data
+from fastapi import FastAPI, Response
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-# Generate synthetic data
-data = generate_synthetic_data(n_repos=250, seed=42)
-data_json = json.dumps(data)
+app = FastAPI()
 
-# Read the frontend files
-css_content = Path("frontend/style.css").read_text()
-js_content = Path("frontend/app.js").read_text()
+# Load pre-generated data
+with open("coords.json") as f:
+    data = json.load(f)
+print(f"Loaded {len(data['repos'])} repos")
 
-# Remove API_URL line
-js_content = re.sub(r"const API_URL = .*;\n", "", js_content)
+@app.get("/")
+async def index():
+    html = Path("frontend/index.html").read_text()
+    return HTMLResponse(html)
 
-# Remove the original loadData function (async function loadData() { ... })
-js_content = re.sub(
-    r"async function loadData\(\) \{[\s\S]*?\n\}\n",
-    "",
-    js_content
-)
+@app.get("/coords")
+async def coords():
+    return JSONResponse(data)
 
-# Inline everything for HF Spaces
-full_html = f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>whoami.dataviz</title>
-    <style>{css_content}</style>
-    <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
-</head>
-<body>
-    <div id="container">
-        <div id="controls">
-            <h1>whoami.dataviz</h1>
-            <p class="subtitle">"Give me a person's browsing history and I'll tell you who they are."</p>
-            <div class="control-group">
-                <label>Projection:</label>
-                <button id="btn-umap" class="active">UMAP</button>
-                <button id="btn-tsne">t-SNE</button>
-            </div>
-            <div class="control-group">
-                <label>Search:</label>
-                <input type="text" id="search" placeholder="repo name...">
-            </div>
-            <div id="stats"></div>
-            <div id="legend"></div>
-        </div>
-        <div id="map"></div>
-        <div id="tooltip"></div>
-    </div>
-    <script>
-        console.log('Script starting...');
+@app.get("/app.js")
+async def app_js():
+    js = Path("frontend/app.js").read_text()
+    return Response(content=js, media_type="application/javascript")
 
-        // Inline data
-        const data = {data_json};
-        console.log('Data loaded:', data.repos.length, 'repos');
-
-        // Initialize immediately since data is inline
-        function init() {{
-            console.log('init() called');
-            try {{
-                updateStats();
-                console.log('updateStats done');
-                updateLegend();
-                console.log('updateLegend done');
-                render();
-                console.log('render done');
-            }} catch (e) {{
-                console.error('Error in init:', e);
-            }}
-        }}
-
-        {js_content}
-
-        // Replace loadData call with init
-        console.log('Calling init...');
-        init();
-        console.log('Script complete');
-    </script>
-</body>
-</html>
-"""
-
-with gr.Blocks() as demo:
-    gr.HTML(full_html)
-
-demo.launch()
+@app.get("/style.css")
+async def style_css():
+    css = Path("frontend/style.css").read_text()
+    return Response(content=css, media_type="text/css")

@@ -3,9 +3,7 @@ title: whoami.dataviz
 emoji: 🧬
 colorFrom: blue
 colorTo: purple
-sdk: gradio
-sdk_version: "5.20.1"
-app_file: app.py
+sdk: docker
 pinned: false
 ---
 
