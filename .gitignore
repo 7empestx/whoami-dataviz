@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.DS_Store
+coords.json
+embeddings/
+*.pkl
